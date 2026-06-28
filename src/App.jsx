@@ -3,6 +3,9 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -12,90 +15,66 @@ function App() {
   const [deadline, setDeadline] = useState("");
   const [tasks, setTasks] = useState([]);
 
-  // Load Tasks
   async function fetchTasks() {
-    const querySnapshot = await getDocs(collection(db, "tasks"));
-
-    const taskList = [];
-
-    querySnapshot.forEach((doc) => {
-      taskList.push({
-        id: doc.id,
-        ...doc.data(),
-      });
-    });
-
-    setTasks(taskList);
+    const snap = await getDocs(collection(db, "tasks"));
+    const list = [];
+    snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+    setTasks(list);
   }
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  // Add Task
   async function addTask() {
     if (!title || !deadline) {
       alert("Please fill all fields");
       return;
     }
+    await addDoc(collection(db, "tasks"), {
+      title,
+      priority,
+      deadline,
+      completed: false,
+    });
+    setTitle("");
+    setPriority("High");
+    setDeadline("");
+    fetchTasks();
+  }
 
-    try {
-      await addDoc(collection(db, "tasks"), {
-        title,
-        priority,
-        deadline,
-        completed: false,
-      });
+  async function deleteTask(id) {
+    await deleteDoc(doc(db, "tasks", id));
+    fetchTasks();
+  }
 
-      alert("Task Added Successfully ✅");
-
-      setTitle("");
-      setPriority("High");
-      setDeadline("");
-
-      fetchTasks();
-
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong.");
-    }
+  async function toggleComplete(id, current) {
+    await updateDoc(doc(db, "tasks", id), {
+      completed: !current,
+    });
+    fetchTasks();
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8">
-
       <div className="max-w-5xl mx-auto">
-
-        <h1 className="text-5xl font-bold text-center text-blue-400">
-          🚀 Deadline Rescue AI
-        </h1>
-
-        <p className="text-center text-slate-400 mt-2 mb-10">
-          Never miss another deadline.
-        </p>
-
-        {/* Add Task */}
+        <h1 className="text-5xl font-bold text-center text-blue-400">🚀 Deadline Rescue AI</h1>
+        <p className="text-center text-slate-400 mt-2 mb-10">Never miss another deadline.</p>
 
         <div className="bg-slate-900 rounded-xl p-6 shadow-lg">
-
-          <h2 className="text-2xl font-bold mb-6">
-            ➕ Add New Task
-          </h2>
+          <h2 className="text-2xl font-bold mb-6">➕ Add New Task</h2>
 
           <div className="space-y-5">
-
-            <input
-              type="text"
+            <input className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700"
               placeholder="Task Title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700"
+              onChange={(e)=>setTitle(e.target.value)}
             />
 
             <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
               className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700"
+              value={priority}
+              onChange={(e)=>setPriority(e.target.value)}
             >
               <option>High</option>
               <option>Medium</option>
@@ -104,9 +83,9 @@ function App() {
 
             <input
               type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
               className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700"
+              value={deadline}
+              onChange={(e)=>setDeadline(e.target.value)}
             />
 
             <button
@@ -115,69 +94,46 @@ function App() {
             >
               ➕ Add Task
             </button>
-
           </div>
-
         </div>
-
-        {/* Task List */}
 
         <div className="bg-slate-900 rounded-xl p-6 shadow-lg mt-10">
+          <h2 className="text-2xl font-bold mb-6">📋 Your Tasks</h2>
 
-          <h2 className="text-2xl font-bold mb-6">
-            📋 Your Tasks
-          </h2>
-
-          {tasks.length === 0 ? (
-            <p className="text-slate-400">
-              No tasks found.
-            </p>
+          {tasks.length===0 ? (
+            <p className="text-slate-400">No tasks found.</p>
           ) : (
             <div className="space-y-4">
+              {tasks.map((task)=>(
+                <div key={task.id} className="bg-slate-800 rounded-lg p-5 border border-slate-700">
+                  <h3 className="text-xl font-bold">{task.title}</h3>
+                  <p>Priority: <b>{task.priority}</b></p>
+                  <p>Deadline: <b>{task.deadline}</b></p>
+                  <p>Status: <span className={task.completed?"text-green-400":"text-yellow-400"}>
+                    {task.completed?"Completed":"Pending"}
+                  </span></p>
 
-              {tasks.map((task) => (
-
-                <div
-                  key={task.id}
-                  className="bg-slate-800 rounded-lg p-5 border border-slate-700"
-                >
-
-                  <h3 className="text-xl font-bold">
-                    {task.title}
-                  </h3>
-
-                  <p className="mt-2">
-                    Priority: <b>{task.priority}</b>
-                  </p>
-
-                  <p>
-                    Deadline: <b>{task.deadline}</b>
-                  </p>
-
-                  <p>
-                    Status:{" "}
-                    <span
-                      className={
-                        task.completed
-                          ? "text-green-400"
-                          : "text-yellow-400"
-                      }
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={()=>toggleComplete(task.id, task.completed)}
+                      className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
                     >
-                      {task.completed ? "Completed" : "Pending"}
-                    </span>
-                  </p>
+                      {task.completed ? "↩ Undo" : "✔ Complete"}
+                    </button>
 
+                    <button
+                      onClick={()=>deleteTask(task.id)}
+                      className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+                    >
+                      🗑 Delete
+                    </button>
+                  </div>
                 </div>
-
               ))}
-
             </div>
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 }
