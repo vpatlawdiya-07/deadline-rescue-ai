@@ -7,13 +7,18 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import Login from "./Login";
+import AIBox from "./AIBox";
+import { db, auth } from "./firebase";
 
 function App() {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("High");
   const [deadline, setDeadline] = useState("");
   const [tasks, setTasks] = useState([]);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   async function fetchTasks() {
     const snap = await getDocs(collection(db, "tasks"));
@@ -22,9 +27,18 @@ function App() {
     setTasks(list);
   }
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    setUser(currentUser);
+    setLoading(false);
+
+    if (currentUser) {
+      fetchTasks();
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
 
   async function addTask() {
     if (!title || !deadline) {
@@ -54,7 +68,17 @@ function App() {
     });
     fetchTasks();
   }
+if (loading) {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+      Loading...
+    </div>
+  );
+}
 
+if (!user) {
+  return <Login />;
+}
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8">
       <div className="max-w-5xl mx-auto">
@@ -133,6 +157,7 @@ function App() {
             </div>
           )}
         </div>
+        <AIBox tasks={tasks} />
       </div>
     </div>
   );
