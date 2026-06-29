@@ -1,24 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Check if Vite is reading the .env file
-console.log("Entire env:", import.meta.env);
-console.log("Gemini Key:", import.meta.env.VITE_GEMINI_API_KEY);
+// Temporary debug version
+console.log("Gemini Test Started");
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-// Create AI only if API key exists
-const ai = apiKey
-  ? new GoogleGenAI({
-      apiKey,
-    })
-  : null;
+const ai = new GoogleGenAI({
+  apiKey: "AQ.Ab8RN6LtX99_jUQSaEDZGtvDR9Z2wxG9ljx9rNdR-PHiqk9HQQ",
+});
 
 export async function generatePlan(tasks) {
-  // Prevent app crash if API key is missing
-  if (!ai) {
-    return "⚠ Gemini API Key is not loaded. Please check your .env file.";
-  }
-
   try {
     const prompt = `
 You are an AI productivity coach.
